@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Start>
+        <Stream url="wss://YOUR_DOMAIN_HERE/twilio/media-stream" />
+    </Start>
+    <Say voice="alice">Hello! I'm your AI assistant. How can I help you today?</Say>
+    <Pause length="30" />
+</Response>
+
