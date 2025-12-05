@@ -58,29 +58,29 @@ graph TB
     end
 
     %% Outbound Call Initiation Flow
-    Client -->|1. POST /twilio/outbound/call<br/>{contactId, toNumber}| TVC
+    Client -->|1. POST /twilio/outbound/call| TVC
     TVC -->|2. If contactId provided| SS
-    SS -->|3. GET /services/data/v58.0/sobjects/Contact/{id}| SAPI
-    SAPI -->|4. Contact Details<br/>{mobilePhone, description}| SS
+    SS -->|3. GET Contact by ID| SAPI
+    SAPI -->|4. Contact Details| SS
     SS -->|5. Contact Record| TVC
     TVC -->|6. makeOutboundCall| OCS
-    OCS -->|7. Call.creator<br/>{to, from, twimlUrl, statusCallback}| TAPI
+    OCS -->|7. Call.creator| TAPI
     TAPI -->|8. Initiate Call| TPSTN
     TPSTN -->|9. Ring Phone| Phone
     Phone -->|10. Answer Call| TPSTN
     
     %% TwiML Generation Flow
-    TPSTN -->|11. POST /twilio/voice<br/>{CallSid, CallStatus}| TVC
+    TPSTN -->|11. POST /twilio/voice| TVC
     TVC -->|12. generateVoiceTwiML| TVS
-    TVS -->|13. TwiML Response<br/>{Start Stream, Say, Pause}| TPSTN
+    TVS -->|13. TwiML Response| TPSTN
     
     %% WebSocket Connection Flow
-    TPSTN -->|14. Connect WebSocket<br/>wss://.../twilio/media-stream| TWS
-    TWS -->|15. WebSocket Messages<br/>{connected, start, media}| TMSH
+    TPSTN -->|14. Connect WebSocket| TWS
+    TWS -->|15. WebSocket Messages| TMSH
     
     %% Real-time Audio Processing Flow
-    TMSH -->|16. Buffer Audio Chunks<br/>with Energy Detection| TMSH
-    TMSH -->|17. Silence Detected<br/>Process Buffered Audio| AAS
+    TMSH -->|16. Buffer Audio Chunks| TMSH
+    TMSH -->|17. Silence Detected| AAS
     AAS -->|18. Convert μ-law to PCM| AAS
     AAS -->|19. Transcribe Audio| GCSTT
     GCSTT -->|20. Transcribed Text| AAS
@@ -90,23 +90,23 @@ graph TB
     AI -->|24. AI Response Text| AAS
     AAS -->|25. Log AI Response| CL
     CL -->|26. Store Entry| CH
-    AAS -->|27. Convert Text to Speech<br/>via Twilio| TMSH
+    AAS -->|27. Convert Text to Speech| TMSH
     TMSH -->|28. Send Audio Stream| TWS
     TWS -->|29. Play Audio| Phone
     
     %% Call Status Update Flow
-    TPSTN -->|30. POST /twilio/status<br/>{CallSid, CallStatus}| TVC
-    TVC -->|31. Check Terminal Status<br/>{completed, no-answer, busy, failed}| TVC
+    TPSTN -->|30. POST /twilio/status| TVC
+    TVC -->|31. Check Terminal Status| TVC
     TVC -->|32. Retrieve Call Context| CC
-    CC -->|33. {contactId, accountId, phone}| TVC
+    CC -->|33. Call Context Data| TVC
     TVC -->|34. Get Conversation Log| CL
     CL -->|35. Format Log by CallSid| CH
     CH -->|36. Formatted Log| CL
     CL -->|37. Conversation Log| TVC
     TVC -->|38. createCallTaskForContactAndAccount| SS
-    SS -->|39. Authenticate<br/>JWT Bearer Flow| SAPI
+    SS -->|39. Authenticate JWT Bearer| SAPI
     SAPI -->|40. Access Token| SS
-    SS -->|41. POST /services/data/v58.0/sobjects/Task/<br/>{WhoId, WhatId, Subject, Status, Description}| SAPI
+    SS -->|41. POST /sobjects/Task| SAPI
     SAPI -->|42. Task Created| SDB
     SDB -->|43. Task Record| SAPI
     SAPI -->|44. Success Response| SS
