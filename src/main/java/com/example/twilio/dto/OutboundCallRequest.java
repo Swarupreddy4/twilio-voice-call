@@ -8,13 +8,15 @@ import jakarta.validation.constraints.Pattern;
  */
 public class OutboundCallRequest {
 
-    @NotBlank(message = "To number is required")
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
+   // @NotBlank(message = "To number is required")
+   // @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
     private String toNumber;
 
     private String fromNumber; // Optional, will use default if not provided
 
     private String customMessage; // Optional custom greeting message
+    private String contactId;
+    private String accountId;
 
     public OutboundCallRequest() {
     }
@@ -25,7 +27,14 @@ public class OutboundCallRequest {
         this.customMessage = customMessage;
     }
 
-    public String getToNumber() {
+    public OutboundCallRequest(String toNumber,String fromNumber, String contactId, String accountId) {
+		super();
+		this.fromNumber = fromNumber;
+		this.contactId = contactId;
+		this.accountId = accountId;
+	}
+
+	public String getToNumber() {
         return toNumber;
     }
 
@@ -48,5 +57,21 @@ public class OutboundCallRequest {
     public void setCustomMessage(String customMessage) {
         this.customMessage = customMessage;
     }
+
+	public String getContactId() {
+		return contactId;
+	}
+
+	public void setContactId(String contactId) {
+		this.contactId = contactId;
+	}
+
+	public String getAccountId() {
+		return accountId;
+	}
+
+	public void setAccountId(String accountId) {
+		this.accountId = accountId;
+	}
 }
 

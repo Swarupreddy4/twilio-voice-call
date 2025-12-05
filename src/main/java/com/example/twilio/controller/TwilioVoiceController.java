@@ -1,10 +1,14 @@
 package com.example.twilio.controller;
 
+import com.example.salesforce.dto.CustomerRecord;
+import com.example.salesforce.service.SalesforceService;
 import com.example.twilio.dto.OutboundCallRequest;
 import com.example.twilio.dto.OutboundCallResponse;
 import com.example.twilio.service.OutboundCallService;
 import com.example.twilio.service.TwilioVoiceService;
+import com.example.twilio.service.ConversationLogger;
 import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -26,7 +30,27 @@ public class TwilioVoiceController {
 
     @Value("${twilio.phone.number}")
     private String twilioPhoneNumber;
+    @Autowired
+    private SalesforceService salesforceService;
 
+    @Autowired(required = false)
+    private ConversationLogger conversationLogger;
+
+    // Track call → Salesforce context for creating Tasks on completion
+    private final java.util.concurrent.ConcurrentMap<String, CallTaskContext> callContextBySid =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static class CallTaskContext {
+        final String contactId;
+        final String accountId;
+        final String phone;
+
+        CallTaskContext(String contactId, String accountId, String phone) {
+            this.contactId = contactId;
+            this.accountId = accountId;
+            this.phone = phone;
+        }
+    }
     /**
      * Endpoint for Twilio to initiate a voice call (inbound or outbound)
      * This endpoint returns TwiML to start the Media Stream
@@ -63,8 +87,80 @@ public class TwilioVoiceController {
     @PostMapping("/outbound/call")
     public ResponseEntity<OutboundCallResponse> makeOutboundCall(
             @Valid @RequestBody OutboundCallRequest request) {
+        // If a Salesforce Contact ID is provided, fetch the Contact and
+        // populate the outbound call details from Salesforce.
+        if (request.getContactId() != null && !request.getContactId().isEmpty()) {
+            CustomerRecord contact = salesforceService.getContact(request.getContactId())
+                    .doOnError(error -> {
+                        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TwilioVoiceController.class);
+                        logger.error("Failed to fetch Salesforce contact for outbound call. ContactId={}", request.getContactId(), error);
+                    })
+                    .block(); // Simple blocking bridge from reactive to sync for this controller
+
+            if (contact == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new OutboundCallResponse(
+                                null,
+                                "failed",
+                                "Failed to fetch Salesforce Contact for ID: " + request.getContactId(),
+                                request.getToNumber(),
+                                request.getFromNumber() != null ? request.getFromNumber() : twilioPhoneNumber
+                        ));
+            }
+
+            // Determine the destination number from Contact (prefer MobilePhone, then Phone)
+            String destinationNumber = contact.getMobilePhone() != null && !contact.getMobilePhone().isEmpty()
+                    ? contact.getMobilePhone()
+                    : contact.getPhone();
+
+            if (destinationNumber == null || destinationNumber.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new OutboundCallResponse(
+                                null,
+                                "failed",
+                                "Salesforce Contact does not have a MobilePhone or Phone number",
+                                null,
+                                request.getFromNumber() != null ? request.getFromNumber() : twilioPhoneNumber
+                        ));
+            }
+
+            request.setToNumber(destinationNumber);
+
+            // Use Contact Description as the custom message if not explicitly provided
+            if (request.getCustomMessage() == null || request.getCustomMessage().isEmpty()) {
+                StringBuilder messageBuilder = new StringBuilder();
+                if (contact.getDescription() != null && !contact.getDescription().isEmpty()) {
+                	 messageBuilder.append("Hello, ")
+                    .append(contact.getFirstName() != null ? contact.getFirstName() + " " : "")
+                    .append(contact.getLastName() != null ? contact.getLastName() : "the contact");
+                    
+                    messageBuilder.append(", "+contact.getDescription());
+                } else {
+                    messageBuilder.append("This is an automated call for ")
+                            .append(contact.getFirstName() != null ? contact.getFirstName() + " " : "")
+                            .append(contact.getLastName() != null ? contact.getLastName() : "the contact")
+                            .append(".");
+                }
+                request.setCustomMessage(messageBuilder.toString());
+
+            }
+        }
+
         OutboundCallResponse response = outboundCallService.makeOutboundCall(request);
-        
+
+        // Store call context so we can create a Salesforce Task when the call completes
+        if (response.getCallSid() != null && request.getContactId() != null && !request.getContactId().isEmpty()) {
+            String phone = request.getToNumber();
+            CallTaskContext ctx = new CallTaskContext(request.getContactId(), request.getAccountId(), phone);
+            callContextBySid.put(response.getCallSid(), ctx);
+            if (conversationLogger != null) {
+                conversationLogger.logConversation(response.getCallSid(),
+                		response.getCallSid() ,
+                        "AI",
+                        request.getCustomMessage());
+            }
+        }
+
         if (response.getCallSid() != null) {
             return ResponseEntity.ok(response);
         } else {
@@ -104,6 +200,47 @@ public class TwilioVoiceController {
     public void handleCallStatus(@RequestParam("CallSid") String callSid,
                                  @RequestParam("CallStatus") String callStatus) {
         twilioVoiceService.handleCallStatus(callSid, callStatus);
+
+        // Create a Salesforce Task for any terminal call status (answered or not)
+        String normalizedStatus = callStatus != null ? callStatus.toLowerCase() : "";
+        boolean isTerminalStatus = normalizedStatus.equals("completed")
+                || normalizedStatus.equals("no-answer")
+                || normalizedStatus.equals("busy")
+                || normalizedStatus.equals("failed")
+                || normalizedStatus.equals("canceled")
+                || normalizedStatus.equals("completed-remote");
+
+        if (isTerminalStatus) {
+            CallTaskContext ctx = callContextBySid.remove(callSid);
+            if (ctx != null) {
+                String conversationLog = conversationLogger != null
+                        ? conversationLogger.getFormattedConversationLogByCallSid(callSid)
+                        : "Conversation log service not available.";
+
+                salesforceService.createCallTaskForContactAndAccount(
+                                ctx.contactId,
+                                ctx.accountId,
+                                ctx.phone,
+                                callStatus,
+                                callSid,
+                                conversationLog
+                        )
+                        .subscribe(result -> {
+                            org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TwilioVoiceController.class);
+                            if (result.isSuccess()) {
+                                logger.info("Successfully created Salesforce Call Task {} for CallSid={} with status={}",
+                                        result.getId(), callSid, callStatus);
+                            } else {
+                                logger.warn("Failed to create Salesforce Call Task for CallSid={} (status={}): {}",
+                                        callSid, callStatus, result.getMessage());
+                            }
+                        }, error -> {
+                            org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TwilioVoiceController.class);
+                            logger.error("Error while creating Salesforce Call Task for CallSid={} (status={})",
+                                    callSid, callStatus, error);
+                        });
+            }
+        }
     }
 }
 

@@ -82,6 +82,42 @@ public class ConversationLogger {
     }
     
     /**
+     * Gets formatted conversation log for a given Call SID by scanning all sessions.
+     */
+    public String getFormattedConversationLogByCallSid(String callSid) {
+        if (callSid == null || callSid.isEmpty()) {
+            return "No conversation history for callSid: null/empty";
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n").append("=".repeat(80)).append("\n");
+        sb.append("CONVERSATION LOG - CallSid: ").append(callSid).append("\n");
+        sb.append("=".repeat(80)).append("\n");
+        
+        boolean found = false;
+        for (var entry : conversationHistory.entrySet()) {
+            List<ConversationEntry> history = entry.getValue();
+            for (ConversationEntry ce : history) {
+                if (callSid.equals(ce.getCallSid())) {
+                    found = true;
+                    String timestamp = ce.getTimestamp().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+                    sb.append(String.format("[%s] %s: %s\n",
+                            timestamp,
+                            ce.getType(),
+                            ce.getText()));
+                }
+            }
+        }
+        
+        if (!found) {
+            sb.append("No conversation history found for CallSid: ").append(callSid).append("\n");
+        }
+        
+        sb.append("=".repeat(80)).append("\n");
+        return sb.toString();
+    }
+    
+    /**
      * Conversation entry class
      */
     public static class ConversationEntry {

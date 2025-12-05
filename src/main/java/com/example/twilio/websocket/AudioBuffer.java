@@ -9,6 +9,7 @@ import java.util.List;
 public class AudioBuffer {
     private final List<byte[]> chunks = new ArrayList<>();
     private long lastAudioTime = System.currentTimeMillis();
+    private long firstAudioTime = 0; // Timestamp of first audio chunk with energy
     private final long silenceTimeoutMs;
     
     public AudioBuffer(long silenceTimeoutMs) {
@@ -28,7 +29,12 @@ public class AudioBuffer {
             // Only update timestamp if there's actual audio energy
             // This prevents silence chunks from resetting the silence timer
             if (hasEnergy) {
-                lastAudioTime = System.currentTimeMillis();
+                long currentTime = System.currentTimeMillis();
+                // Track first audio chunk with energy
+                if (firstAudioTime == 0) {
+                    firstAudioTime = currentTime;
+                }
+                lastAudioTime = currentTime;
             }
         }
     }
@@ -83,6 +89,21 @@ public class AudioBuffer {
         return System.currentTimeMillis() - lastAudioTime;
     }
     
+    /**
+     * Gets the total duration of audio captured (from first to last audio chunk with energy)
+     * 
+     * @return milliseconds of audio duration, or 0 if no audio captured yet
+     */
+    public long getAudioDuration() {
+        synchronized (chunks) {
+            if (firstAudioTime == 0 || chunks.isEmpty()) {
+                return 0;
+            }
+            // Duration is from first audio to last audio
+            return lastAudioTime - firstAudioTime;
+        }
+    }
+    
     public byte[] getBufferedAudio() {
         synchronized (chunks) {
             if (chunks.isEmpty()) {
@@ -103,6 +124,7 @@ public class AudioBuffer {
             // Clear buffer
             chunks.clear();
             lastAudioTime = System.currentTimeMillis();
+            firstAudioTime = 0; // Reset first audio time
             
             return result;
         }
@@ -112,6 +134,7 @@ public class AudioBuffer {
         synchronized (chunks) {
             chunks.clear();
             lastAudioTime = System.currentTimeMillis();
+            firstAudioTime = 0; // Reset first audio time
         }
     }
     

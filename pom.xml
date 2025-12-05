@@ -35,7 +35,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
-        
+        <!-- https://mvnrepository.com/artifact/com.google.cloud/google-cloud-texttospeech -->
+<dependency>
+    <groupId>com.google.cloud</groupId>
+    <artifactId>google-cloud-speech</artifactId>
+    <version>4.51.0</version>
+</dependency>
         <!-- Spring Boot Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -68,6 +73,50 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        
+        <!-- Vosk Speech Recognition (Open Source) -->
+        <!-- Note: Vosk Java bindings may need to be downloaded from:
+             https://github.com/alphacep/vosk-api/releases
+             Or use the Maven dependency below if available -->
+        <dependency>
+            <groupId>com.alphacephei</groupId>
+            <artifactId>vosk</artifactId>
+            <version>0.3.45</version>
+        </dependency>
+        
+        <!-- CMU Sphinx4 (Alternative Open Source Option) -->
+        <!-- Uncomment to use Sphinx instead of Vosk -->
+        <!--
+        <dependency>
+            <groupId>edu.cmu.sphinx</groupId>
+            <artifactId>sphinx4-core</artifactId>
+            <version>5prealpha</version>
+        </dependency>
+        <dependency>
+            <groupId>edu.cmu.sphinx</groupId>
+            <artifactId>sphinx4-data</artifactId>
+            <version>5prealpha</version>
+        </dependency>
+        -->
+        
+        <!-- Spring WebFlux for WebClient (REST API calls) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
+        <!-- JWT support for Salesforce JWT Bearer Flow -->
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>9.37.3</version>
+        </dependency>
+        
+        <!-- Apache HttpClient for OAuth -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
         </dependency>
     </dependencies>
     

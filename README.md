@@ -1,6 +1,6 @@
 # Twilio Voice AI Agent with WebSocket
 
-A Spring Boot application that implements a Twilio Voice AI Agent using WebSocket connections for real-time audio streaming and AI-powered voice interactions.
+A Spring Boot application that implements a Twilio Voice AI Agent using WebSocket connections for real-time audio streaming and AI-powered voice interactions, with optional Salesforce integration for contact-driven outbound calls and automatic Task logging.
 
 ## Features
 
@@ -115,7 +115,7 @@ java -jar target/twilio-voice-ai-agent-1.0.0.jar
 
 1. **TwilioVoiceController**: REST endpoints for Twilio callbacks
    - `/twilio/voice` - Handles incoming calls, returns TwiML
-   - `/twilio/status` - Receives call status updates
+   - `/twilio/status` - Receives call status updates and (optionally) creates Salesforce Tasks when calls complete
 
 2. **TwilioMediaStreamHandler**: WebSocket handler for media streams
    - Handles WebSocket connections from Twilio
@@ -186,6 +186,8 @@ Twilio webhook endpoint that returns TwiML to start the media stream (for both i
 ### POST /twilio/outbound/call
 Make an outbound call with AI voice agent.
 
+#### A. Direct phone‑driven call
+
 **Request Body**:
 ```json
 {
@@ -195,7 +197,24 @@ Make an outbound call with AI voice agent.
 }
 ```
 
-**Response**:
+#### B. Salesforce contact‑driven call
+
+If you pass a Salesforce `contactId` (and optional `accountId`), the application will:
+
+- Fetch the Contact from Salesforce
+- Use `MobilePhone` (or `Phone` as fallback) as the destination number
+- Build a greeting from the Contact name and `Description` as the `customMessage`
+
+**Request Body**:
+```json
+{
+  "contactId": "003XXXXXXXXXXXXXXX",
+  "accountId": "001XXXXXXXXXXXXXXX",
+  "fromNumber": "+18026590229"
+}
+```
+
+**Response** (both variants):
 ```json
 {
   "callSid": "CAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -217,6 +236,18 @@ Receives call status updates from Twilio.
 **Parameters**:
 - `CallSid`: Unique call identifier
 - `CallStatus`: Current call status
+
+When a call that was initiated with a `contactId` completes (`CallStatus=completed`), the application:
+
+- Retrieves the full conversation log (user speech + AI responses) from the in‑memory `ConversationLogger`
+- Creates a Salesforce `Task` via `SalesforceService.createCallTaskForContactAndAccount`:
+  - `WhoId` = Contact
+  - `WhatId` = Account (if provided)
+  - `Subject` = `AI Voice Call - <CallStatus>`
+  - `Status` = `Completed`
+  - `TaskSubtype` = `Call`, `CallType` = `Outbound`
+  - `CallObject` = `CallSid`, `Phone` = dialed number
+  - `Description` = formatted conversation log (user + AI messages)
 
 ### WebSocket /twilio/media-stream
 WebSocket endpoint for Twilio Media Streams.

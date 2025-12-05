@@ -1,6 +1,5 @@
 package com.example.twilio.service;
 
-import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Call;
 import com.twilio.twiml.TwiMLException;
 import com.twilio.twiml.VoiceResponse;
@@ -61,7 +60,7 @@ public class TwilioTwiMLInjectionService {
             logger.info("Injecting TwiML into call {}: {}", callSid, twiml);
 
             // Update the call with new TwiML
-            Call call = Call.updater(callSid)
+            Call.updater(callSid)
                     .setTwiml(twiml)
                     .update();
 
@@ -97,7 +96,11 @@ public class TwilioTwiMLInjectionService {
             // Important: We restart the stream to ensure bidirectional communication continues
             String twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                     "<Response>\n" +
+                    "    <Stop>\n" +
+                    "        <Stream />\n" +
+                    "    </Stop>\n" +
                     "    <Say voice=\"alice\">" + escapeXml(message) + "</Say>\n" +
+                    "    <Pause length=\"1\" />\n" +
                     "    <Start>\n" +
                     "        <Stream url=\"" + escapeXml(streamUrl) + "\" />\n" +
                     "    </Start>\n" +
@@ -106,7 +109,7 @@ public class TwilioTwiMLInjectionService {
 
             logger.info("Injecting TwiML with Say and Stream into call {}: {}", callSid, message);
 
-            Call call = Call.updater(callSid)
+            Call.updater(callSid)
                     .setTwiml(twiml)
                     .update();
 
@@ -115,6 +118,43 @@ public class TwilioTwiMLInjectionService {
 
         } catch (Exception e) {
             logger.error("Error injecting TwiML into call {}", callSid, e);
+            return false;
+        }
+    }
+
+    /**
+     * Plays a final message and hangs up the call safely.
+     */
+    public boolean injectSayAndHangup(String callSid, String message) {
+        try {
+            if (callSid == null || callSid.isEmpty()) {
+                logger.warn("Cannot inject hangup TwiML: Call SID is null or empty");
+                return false;
+            }
+
+            String safeMessage = (message != null && !message.trim().isEmpty())
+                    ? message
+                    : "Thank you for calling. Goodbye!";
+
+            String twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                    "<Response>\n" +
+                    "    <Stop>\n" +
+                    "        <Stream />\n" +
+                    "    </Stop>\n" +
+                    "    <Say voice=\"alice\">" + escapeXml(safeMessage) + "</Say>\n" +
+                    "    <Hangup />\n" +
+                    "</Response>";
+
+            logger.info("Injecting hangup TwiML into call {} with message: {}", callSid, safeMessage);
+
+            Call.updater(callSid)
+                    .setTwiml(twiml)
+                    .update();
+
+            logger.info("Successfully injected hangup TwiML into call {}", callSid);
+            return true;
+        } catch (Exception e) {
+            logger.error("Error injecting hangup TwiML into call {}", callSid, e);
             return false;
         }
     }
