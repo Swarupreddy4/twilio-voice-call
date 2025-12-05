@@ -94,12 +94,12 @@ graph TB
     CRM --> LOG
     
     %% Styling
-    classDef application fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
-    classDef twilio fill:#f44336,stroke:#c62828,stroke-width:2px,color:#fff
-    classDef google fill:#4285f4,stroke:#1565c0,stroke-width:2px,color:#fff
-    classDef salesforce fill:#00a1e0,stroke:#0070d2,stroke-width:2px,color:#fff
-    classDef client fill:#f5f5f5,stroke:#616161,stroke-width:2px
-    classDef user fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef application fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000
+    classDef twilio fill:#d32f2f,stroke:#b71c1c,stroke-width:2px,color:#fff
+    classDef google fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    classDef salesforce fill:#0070d2,stroke:#005a9e,stroke-width:2px,color:#fff
+    classDef client fill:#f5f5f5,stroke:#616161,stroke-width:2px,color:#000
+    classDef user fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
     
     class APP,REST,WS,CALL,AI,CRM,LOG application
     class TAPI,TWS,TPSTN twilio
@@ -360,11 +360,11 @@ graph TB
     SS -->|45. Task Created| TVC
 
     %% Styling
-    classDef controller fill:#e1f5ff,stroke:#01579b,stroke-width:2px
-    classDef service fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef storage fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
-    classDef websocket fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef controller fill:#e1f5ff,stroke:#01579b,stroke-width:2px,color:#000
+    classDef service fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    classDef storage fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#000
+    classDef websocket fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
     
     class TVC controller
     class OCS,TVS,SS,AAS,CL service
@@ -644,14 +644,14 @@ graph TB
     SSL -.->|encrypt| TWS
 
     %% Styling
-    classDef controller fill:#e1f5ff,stroke:#01579b,stroke-width:2px
-    classDef service fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef websocket fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef storage fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
-    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef client fill:#e3f2fd,stroke:#0277bd,stroke-width:2px
-    classDef infrastructure fill:#f5f5f5,stroke:#424242,stroke-width:2px,stroke-dasharray: 5 5
-    classDef future fill:#fafafa,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray: 3 3
+    classDef controller fill:#e1f5ff,stroke:#01579b,stroke-width:2px,color:#000
+    classDef service fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    classDef websocket fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
+    classDef storage fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#000
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    classDef client fill:#e3f2fd,stroke:#0277bd,stroke-width:2px,color:#000
+    classDef infrastructure fill:#f5f5f5,stroke:#424242,stroke-width:2px,stroke-dasharray: 5 5,color:#000
+    classDef future fill:#fafafa,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray: 3 3,color:#000
     
     class TVC,SC controller
     class OCS,TVS,SS,AAS,CL service
